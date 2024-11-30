@@ -15,13 +15,13 @@ from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.gemini import GeminiEmbedding
 from llama_index.core import StorageContext, VectorStoreIndex, SimpleDirectoryReader
 from llama_index.core import Settings
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load API keys from Streamlit secrets
+google_api_key = st.secrets["GOOGLE_API_KEY"]
+pinecone_api_key = st.secrets["PINECONE_API_KEY"]
 
-# Set up LLM and embedding model using environment variables
-llm = Gemini(api_key=os.environ["GOOGLE_API_KEY"])
+# Set up LLM and embedding model using secrets
+llm = Gemini(api_key=google_api_key)
 embed_model = GeminiEmbedding(model_name="models/embedding-001")
 
 # Configure settings for LLM and embeddings
@@ -30,15 +30,21 @@ Settings.embed_model = embed_model
 Settings.chunk_size = 1024
 
 # Initialize Pinecone client
-pinecone_client = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
+pinecone_client = Pinecone(api_key=pinecone_api_key)
 
 # Function to load documents and initialize the index in Pinecone
 def ingest_documents():
     # Load documents from the specified folder
     documents = SimpleDirectoryReader("data").load_data()
 
+    # Check if the Pinecone index exists, if not create one
+    index_name = "cbotindex"
+    dimension = 768  # Ensure this matches the embedding model dimension
+    if index_name not in pinecone_client.list_indexes().names():
+        pinecone_client.create_index(name=index_name, dimension=dimension)
+
     # Initialize Pinecone index and vector store
-    pinecone_index = pinecone_client.Index("cbotindex")
+    pinecone_index = pinecone_client.Index(index_name)
     vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
 
     # Create storage context and index from documents
