@@ -16,6 +16,7 @@ from llama_index import (
     StorageContext,
 )
 from llama_index.llms.openai import OpenAI
+from llama_index import SimpleDirectoryReader
 from llama_index.vector_stores.pinecone import PineconeVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
 import pinecone
