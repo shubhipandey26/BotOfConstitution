@@ -8,12 +8,6 @@ try:
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pinecone-client==2.0.2"])
 
-# Check and install langchain_community if it's not installed
-try:
-    import langchain_community
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "langchain-community==0.15.0"])
-
 # Import the required libraries after ensuring dependencies are installed
 import streamlit as st
 from llama_index.llms.gemini import Gemini
