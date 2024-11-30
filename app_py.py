@@ -2,56 +2,56 @@ import os
 import subprocess
 import sys
 
-# Check and install pinecone-client if it's not installed
+# Install missing dependencies
 try:
     import pinecone
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pinecone-client==2.0.2"])
 
-# Import the required libraries after ensuring dependencies are installed
+# Required imports
 import streamlit as st
-from llama_index.llms.gemini import Gemini
+from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.gemini import GeminiEmbedding
-from llama_index.core import StorageContext, VectorStoreIndex, SimpleDirectoryReader
-from llama_index.core import Settings
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index import StorageContext, VectorStoreIndex, SimpleDirectoryReader
+from llama_index import set_global_settings
 from dotenv import load_dotenv
 import pinecone
 
-# Load environment variables from .env file for sensitive keys
+# Load environment variables
 load_dotenv()
 
-# Ensure environment variables are loaded
-google_api_key = os.getenv("GOOGLE_API_KEY")
+# API keys
+openai_api_key = os.getenv("OPENAI_API_KEY")
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 pinecone_env = os.getenv("PINECONE_ENV", "us-east1-gcp")
 
-# Check if the required environment variables are set
-if not google_api_key or not pinecone_api_key:
-    st.error("API keys for Google or Pinecone are missing! Please check the .env file.")
-    st.stop()  # Stop execution if keys are missing
+# Check API keys
+if not openai_api_key or not pinecone_api_key:
+    st.error("API keys for OpenAI or Pinecone are missing! Please check the .env file.")
+    st.stop()
 
-# Set up LLM and embedding model
-llm = Gemini(api_key=google_api_key)
-embed_model = GeminiEmbedding(model_name="models/embedding-001")
-
-# Configure settings for LLM and embeddings
-Settings.llm = llm
-Settings.embed_model = embed_model
-Settings.chunk_size = 1024
-
-# Initialize Pinecone client
+# Initialize Pinecone
 pinecone.init(api_key=pinecone_api_key, environment=pinecone_env)
 
-# Function to load documents and initialize the index in Pinecone
+# Set up LLM and embedding model
+llm = OpenAI(api_key=openai_api_key)
+embed_model = OpenAIEmbedding(model="text-embedding-ada-002")  # Specify embedding model
+
+# Configure settings globally
+set_global_settings(llm=llm, embed_model=embed_model, chunk_size=1024)
+
+# Function to ingest documents
 def ingest_documents():
     try:
-        # Load documents from the specified folder
+        # Load documents from a "data" folder
         documents = SimpleDirectoryReader("data").load_data()
 
-        # Check if the Pinecone index exists, if not create one
+        # Pinecone index name and dimension
         index_name = "cbotindex"
-        dimension = 768  # Ensure this matches the embedding model dimension
+        dimension = 1536  # Dimension must match embedding model
+
+        # Check if index exists, create if not
         if index_name not in pinecone.list_indexes():
             pinecone.create_index(name=index_name, dimension=dimension)
 
@@ -69,30 +69,29 @@ def ingest_documents():
         st.error(f"Error during document ingestion: {e}")
         return None
 
-# Function to initialize the chat engine
+# Initialize chat engine
 def initialize_app():
-    # Ingest documents (if not already ingested)
     if 'index' not in st.session_state:
         st.session_state.index = ingest_documents()
 
-    # Create and return the chat engine
+    # Create and return chat engine
     return st.session_state.index.as_chat_engine() if st.session_state.index else None
 
-# Streamlit App UI
+# Streamlit UI
 st.title("Constitution Chatbot")
-st.write("Ingest documents to the Pinecone index and interact with the Knowledge Agent.")
+st.write("Ingest documents to Pinecone and interact with the Knowledge Agent.")
 
-# Button to trigger document ingestion
+# Ingest documents button
 if st.button("Ingest Documents"):
     st.session_state.index = ingest_documents()
     if st.session_state.index:
         st.session_state.chat_engine = st.session_state.index.as_chat_engine()
 
-# Initialize the chat engine only once
+# Initialize chat engine once
 if 'chat_engine' not in st.session_state:
     st.session_state.chat_engine = initialize_app()
 
-# Initialize chat history if not present
+# Initialize chat history
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
@@ -118,17 +117,16 @@ if text_input:
             response = st.session_state.chat_engine.chat(text_input)
             response_text = response.response
 
-            # Display the response
+            # Display response
             st.chat_message("assistant").markdown(response_text)
 
             # Update chat history
             st.session_state.chat_history.append({"role": "user", "content": text_input})
             st.session_state.chat_history.append({"role": "assistant", "content": response_text})
-
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Error: {e}")
 
-# Optional: Add button to clear chat history
+# Button to clear chat
 if st.button("Clear Chat"):
-    st.session_state.chat_history = []  # Clear the chat history
-    st.experimental_rerun()  # Simulate a restart by re-running the script
+    st.session_state.chat_history = []  # Clear history
+    st.experimental_rerun()
