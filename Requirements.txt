@@ -2,3 +2,4 @@ streamlit
 pinecone-client
 llama-index
 python-dotenv
+transformers
