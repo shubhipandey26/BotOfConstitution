@@ -1,22 +1,25 @@
 import os
 import subprocess
 import sys
+import streamlit as st
+from dotenv import load_dotenv
+import pinecone
+from llama_index import (
+    SimpleDirectoryReader,
+    VectorStoreIndex,
+    StorageContext,
+    PineconeVectorStore,
+    Settings
+)
+from llama_index.embeddings.gemini import GeminiEmbedding
+from llama_index.llms.gemini import Gemini
+import importlib
 
 # Check and install pinecone-client if it's not installed
 try:
     import pinecone
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "pinecone-client==2.0.2"])
-
-# Import the required libraries after ensuring dependencies are installed
-import streamlit as st
-from llama_index.llms.gemini import Gemini
-from llama_index.vector_stores.pinecone import PineconeVectorStore
-from llama_index.embeddings.gemini import GeminiEmbedding
-from llama_index.core import StorageContext, VectorStoreIndex, SimpleDirectoryReader
-from llama_index.core import Settings
-from dotenv import load_dotenv
-import pinecone
 
 # Load environment variables from .env file for sensitive keys
 load_dotenv()
