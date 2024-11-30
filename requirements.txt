@@ -1,5 +1,5 @@
 streamlit==1.40.2
 pinecone-client==2.0.2
-llama_index==0.4.0  # Use a stable version to avoid circular imports
+llama_index==0.3.0
 python-dotenv==1.0.0
-langchain==0.0.186  # Ensure compatibility with your setup
+langchain==0.0.144
